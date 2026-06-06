@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 
 const CLIENT_ID = "daac0a3489394cd3bf19d9a85987c4a9";
-const REDIRECT_URI = "https://localhost:5173/callback";
+const REDIRECT_URI = "https://sage-boba-e40b86.netlify.app/callback";
 const SCOPES = "user-library-read playlist-modify-public playlist-modify-private";
 
 function getSpotifyAuthURL() {
