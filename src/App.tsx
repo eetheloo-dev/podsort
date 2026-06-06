@@ -23,7 +23,7 @@ function getTokenFromURL() {
 export default function App() {
   const [token, setToken] = useState("");
   const [podcasts, setPodcasts] = useState("");
-  const [results, setResults] = useState(null);
+  const [results, setResults] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [apiKey, setApiKey] = useState("");
   const [error, setError] = useState("");
