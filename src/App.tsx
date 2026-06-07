@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 
 const CLIENT_ID = "daac0a3489394cd3bf19d9a85987c4a9";
 const REDIRECT_URI = "https://sage-boba-e40b86.netlify.app/callback";
-const SCOPES = "user-library-read playlist-modify-public playlist-modify-private ugc-image-upload";
+const SCOPES = "user-library-read playlist-modify-public playlist-modify-private";
 
 function getSpotifyAuthURL() {
   const params = new URLSearchParams({
@@ -20,17 +20,14 @@ export default function App() {
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [done, setDone] = useState(false);
-  const [playlistUrl, setPlaylistUrl] = useState("");
+  const [episodes, setEpisodes] = useState<any[]>([]);
+  const [days, setDays] = useState(7);
 
   useEffect(() => {
     const code = new URLSearchParams(window.location.search).get("code");
     if (code) {
       window.history.replaceState({}, document.title, "/");
       exchangeCode(code);
-    } else {
-      // Don't reuse saved token - always require fresh login
-localStorage.removeItem("spotify_token");
     }
   }, []);
 
@@ -44,8 +41,7 @@ localStorage.removeItem("spotify_token");
       const data = await res.json();
       if (data.access_token) {
         setToken(data.access_token);
-        localStorage.setItem("spotify_token", data.access_token);
-        setStatus("Spotify connected!");
+        setStatus("");
       } else {
         setError("Token exchange failed: " + JSON.stringify(data));
       }
@@ -59,11 +55,9 @@ localStorage.removeItem("spotify_token");
     if (!token) { setError("Please connect Spotify first"); return; }
     setLoading(true);
     setError("");
-    setDone(false);
-    setPlaylistUrl("");
+    setEpisodes([]);
 
     try {
-      // Step 1: Fetch followed podcasts
       setStatus("Fetching your podcasts from Spotify...");
       const showsRes = await fetch("https://api.spotify.com/v1/me/shows?limit=50", {
         headers: { Authorization: `Bearer ${token}` },
@@ -79,7 +73,6 @@ localStorage.removeItem("spotify_token");
       const podcasts = showsData.items.map((item: any) => item.show.name);
       setStatus(`Found ${podcasts.length} podcasts. Classifying with Claude...`);
 
-      // Step 2: Claude classifies energy podcasts
       const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
@@ -100,16 +93,14 @@ localStorage.removeItem("spotify_token");
       const classified = JSON.parse(text);
       const energyNames: string[] = classified.energy;
 
-      setStatus(`Found ${energyNames.length} energy podcasts. Checking for new episodes...`);
+      setStatus(`Found ${energyNames.length} energy podcasts. Checking last ${days} day${days > 1 ? "s" : ""}...`);
 
-      // Step 3: Get show IDs for energy podcasts
       const energyShows = showsData.items
         .filter((item: any) => energyNames.includes(item.show.name))
         .map((item: any) => item.show);
 
-      // Step 4: Fetch episodes from last 7 days
-      const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-      const newEpisodeUris: string[] = [];
+      const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+      const newEpisodes: any[] = [];
 
       for (const show of energyShows) {
         const epRes = await fetch(
@@ -120,45 +111,23 @@ localStorage.removeItem("spotify_token");
         for (const ep of epData.items || []) {
           if (!ep || !ep.release_date) continue;
           const releaseDate = new Date(ep.release_date).getTime();
-          if (releaseDate >= sevenDaysAgo) {
-            newEpisodeUris.push(ep.uri);
+          if (releaseDate >= cutoff) {
+            newEpisodes.push({
+              id: ep.id,
+              name: ep.name,
+              show: show.name,
+              duration: Math.round(ep.duration_ms / 60000),
+              date: ep.release_date,
+              url: ep.external_urls?.spotify,
+              image: show.images?.[1]?.url || show.images?.[0]?.url,
+            });
           }
         }
       }
 
-      if (newEpisodeUris.length === 0) {
-        setStatus("No new episodes in the last 7 days from your energy podcasts.");
-        setLoading(false);
-        return;
-      }
+      setEpisodes(newEpisodes);
+      setStatus(`⚡ Found ${newEpisodes.length} energy episodes from the last ${days} day${days > 1 ? "s" : ""}`);
 
-      setStatus(`Found ${newEpisodeUris.length} new episodes. Creating playlist...`);
-
-      // Step 5: Get Spotify user ID
-      const userRes = await fetch("https://api.spotify.com/v1/me", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const userData = await userRes.json();
-
-      // Step 6: Use hardcoded ⚡ Energy Pods playlist
-const playlist = { id: "4v3Ar7iaiEZRO1d2uNCwWq" };
-
-      // Step 7: Add episodes to playlist
-const addRes = await fetch(`https://api.spotify.com/v1/playlists/${playlist.id}/tracks`, {
-  method: "POST",
-  headers: {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({ uris: newEpisodeUris.slice(0, 5) }),
-});
-const addData = await addRes.json();
-setStatus(`Add result: ${JSON.stringify(addData).substring(0, 200)}`);
-await new Promise(r => setTimeout(r, 5000));
-
-      setPlaylistUrl(`https://open.spotify.com/playlist/${playlist.id}`);
-      setStatus(`✅ Done! Added ${newEpisodeUris.length} episodes to ⚡ Energy Pods`);
-      setDone(true);
     } catch (err: any) {
       setError("Error: " + err.message);
     } finally {
@@ -167,7 +136,7 @@ await new Promise(r => setTimeout(r, 5000));
   }
 
   return (
-    <div style={{ maxWidth: "600px", margin: "40px auto", fontFamily: "monospace", padding: "0 20px" }}>
+    <div style={{ maxWidth: "680px", margin: "40px auto", fontFamily: "monospace", padding: "0 20px" }}>
       <h1>🎧 PodSort</h1>
       <p style={{ color: "#666" }}>AI-powered podcast sorter — Energy vs Everything Else.</p>
 
@@ -192,10 +161,34 @@ await new Promise(r => setTimeout(r, 5000));
         />
       </div>
 
+      <div style={{ marginTop: "20px" }}>
+        <label>Show episodes from the last:</label>
+        <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+          {[1, 3, 7, 30].map(d => (
+            <button
+              key={d}
+              onClick={() => setDays(d)}
+              style={{
+                padding: "8px 16px",
+                background: days === d ? "#e8ff47" : "#1a1a1a",
+                color: days === d ? "black" : "#aaa",
+                border: days === d ? "none" : "1px solid #333",
+                borderRadius: "20px",
+                fontWeight: "bold",
+                cursor: "pointer",
+                fontFamily: "monospace",
+              }}
+            >
+              {d} {d === 1 ? "day" : "days"}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <button
         onClick={runPipeline}
         disabled={loading}
-        style={{ marginTop: "16px", padding: "10px 24px", background: "#e8ff47", border: "none", fontWeight: "bold", cursor: "pointer" }}
+        style={{ marginTop: "20px", padding: "10px 24px", background: "#e8ff47", border: "none", fontWeight: "bold", cursor: "pointer" }}
       >
         {loading ? "Running..." : "⚡ Run PodSort"}
       </button>
@@ -203,12 +196,41 @@ await new Promise(r => setTimeout(r, 5000));
       {status && <p style={{ color: "#aaa", marginTop: "10px" }}>{status}</p>}
       {error && <p style={{ color: "red", marginTop: "10px" }}>{error}</p>}
 
-      {done && (
-        <div style={{ marginTop: "20px", padding: "16px", background: "#1a1a1a", borderRadius: "8px" }}>
-          <p style={{ color: "#1DB954" }}>⚡ Energy Pods playlist updated!</p>
-          <a href={playlistUrl} target="_blank" rel="noreferrer" style={{ color: "#1DB954", fontWeight: "bold", fontSize: "1.1rem" }}>
-            → Open ⚡ Energy Pods in Spotify
-          </a>
+      {episodes.length > 0 && (
+        <div style={{ marginTop: "30px" }}>
+          <h2 style={{ color: "#e8ff47" }}>⚡ New Energy Episodes</h2>
+          {episodes.map((ep) => (
+            
+              key={ep.id}
+              href={ep.url}
+              target="_blank"
+              rel="noreferrer"
+              style={{ textDecoration: "none" }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  padding: "12px",
+                  marginBottom: "10px",
+                  background: "#1a1a1a",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                  border: "1px solid #333",
+                }}
+                onMouseEnter={e => (e.currentTarget.style.border = "1px solid #1DB954")}
+                onMouseLeave={e => (e.currentTarget.style.border = "1px solid #333")}
+              >
+                {ep.image && <img src={ep.image} alt={ep.show} style={{ width: "56px", height: "56px", borderRadius: "6px", flexShrink: 0 }} />}
+                <div>
+                  <p style={{ margin: 0, color: "white", fontWeight: "bold", fontSize: "0.9rem" }}>{ep.name}</p>
+                  <p style={{ margin: "4px 0 0", color: "#1DB954", fontSize: "0.8rem" }}>{ep.show}</p>
+                  <p style={{ margin: "2px 0 0", color: "#666", fontSize: "0.75rem" }}>{ep.date} · {ep.duration} min</p>
+                </div>
+              </div>
+            </a>
+          ))}
         </div>
       )}
     </div>
