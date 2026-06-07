@@ -207,6 +207,11 @@ export default function App() {
               rel="noreferrer"
               style={{ textDecoration: "none" }}
             >
+              href={ep.url}
+              target="_blank"
+              rel="noreferrer"
+              style={{ textDecoration: "none" }}
+            >
               <div
                 style={{
                   display: "flex",
