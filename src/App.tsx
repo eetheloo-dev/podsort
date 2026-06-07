@@ -84,7 +84,7 @@ export default function App() {
         body: JSON.stringify({
           model: "claude-haiku-4-5-20251001",
           max_tokens: 1000,
-          system: `Classify podcasts as "energy" (motivating, high-energy, business, fitness, entrepreneurship, tech, news) or "other". Reply ONLY with JSON: {"energy": [], "other": []}`,
+          system: "Classify podcasts as energy (motivating, high-energy, business, fitness, entrepreneurship, tech, news) or other. Reply ONLY with JSON: {\"energy\": [], \"other\": []}",
           messages: [{ role: "user", content: podcasts.join("\n") }],
         }),
       });
@@ -126,7 +126,7 @@ export default function App() {
       }
 
       setEpisodes(newEpisodes);
-      setStatus(`⚡ Found ${newEpisodes.length} energy episodes from the last ${days} day${days > 1 ? "s" : ""}`);
+      setStatus(`Found ${newEpisodes.length} energy episodes from the last ${days} day${days > 1 ? "s" : ""}`);
 
     } catch (err: any) {
       setError("Error: " + err.message);
@@ -137,8 +137,8 @@ export default function App() {
 
   return (
     <div style={{ maxWidth: "680px", margin: "40px auto", fontFamily: "monospace", padding: "0 20px" }}>
-      <h1>🎧 PodSort</h1>
-      <p style={{ color: "#666" }}>AI-powered podcast sorter — Energy vs Everything Else.</p>
+      <h1>PodSort</h1>
+      <p style={{ color: "#666" }}>AI-powered podcast sorter - Energy vs Everything Else.</p>
 
       {!token ? (
         <a href={getSpotifyAuthURL()}>
@@ -147,11 +147,12 @@ export default function App() {
           </button>
         </a>
       ) : (
-        <p style={{ color: "#1DB954" }}>✅ Spotify connected!</p>
+        <p style={{ color: "#1DB954" }}>Spotify connected!</p>
       )}
 
       <div style={{ marginTop: "20px" }}>
-        <label>Your Claude API Key</label><br />
+        <label>Your Claude API Key</label>
+        <br />
         <input
           type="password"
           value={apiKey}
@@ -190,7 +191,7 @@ export default function App() {
         disabled={loading}
         style={{ marginTop: "20px", padding: "10px 24px", background: "#e8ff47", border: "none", fontWeight: "bold", cursor: "pointer" }}
       >
-        {loading ? "Running..." : "⚡ Run PodSort"}
+        {loading ? "Running..." : "Run PodSort"}
       </button>
 
       {status && <p style={{ color: "#aaa", marginTop: "10px" }}>{status}</p>}
@@ -198,15 +199,10 @@ export default function App() {
 
       {episodes.length > 0 && (
         <div style={{ marginTop: "30px" }}>
-          <h2 style={{ color: "#e8ff47" }}>⚡ New Energy Episodes</h2>
-          {episodes.map((ep) => (
-            
+          <h2 style={{ color: "#e8ff47" }}>New Energy Episodes</h2>
+          {episodes.map(ep => (
+            <a
               key={ep.id}
-              href={ep.url}
-              target="_blank"
-              rel="noreferrer"
-              style={{ textDecoration: "none" }}
-            >
               href={ep.url}
               target="_blank"
               rel="noreferrer"
@@ -227,11 +223,17 @@ export default function App() {
                 onMouseEnter={e => (e.currentTarget.style.border = "1px solid #1DB954")}
                 onMouseLeave={e => (e.currentTarget.style.border = "1px solid #333")}
               >
-                {ep.image && <img src={ep.image} alt={ep.show} style={{ width: "56px", height: "56px", borderRadius: "6px", flexShrink: 0 }} />}
+                {ep.image && (
+                  <img
+                    src={ep.image}
+                    alt={ep.show}
+                    style={{ width: "56px", height: "56px", borderRadius: "6px", flexShrink: 0 }}
+                  />
+                )}
                 <div>
                   <p style={{ margin: 0, color: "white", fontWeight: "bold", fontSize: "0.9rem" }}>{ep.name}</p>
                   <p style={{ margin: "4px 0 0", color: "#1DB954", fontSize: "0.8rem" }}>{ep.show}</p>
-                  <p style={{ margin: "2px 0 0", color: "#666", fontSize: "0.75rem" }}>{ep.date} · {ep.duration} min</p>
+                  <p style={{ margin: "2px 0 0", color: "#666", fontSize: "0.75rem" }}>{ep.date} - {ep.duration} min</p>
                 </div>
               </div>
             </a>
