@@ -16,7 +16,6 @@ function getSpotifyAuthURL() {
 
 export default function App() {
   const [token, setToken] = useState("");
-  const [apiKey, setApiKey] = useState("");
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -51,7 +50,6 @@ export default function App() {
   }
 
   async function runPipeline() {
-    if (!apiKey) { setError("Please enter your Claude API key"); return; }
     if (!token) { setError("Please connect Spotify first"); return; }
     setLoading(true);
     setError("");
@@ -71,22 +69,11 @@ export default function App() {
       }
 
       const podcasts = showsData.items.map((item: any) => item.show.name);
-      setStatus(`Found ${podcasts.length} podcasts. Classifying with Claude...`);
+      setStatus(`Found ${podcasts.length} podcasts. Classifying...`);
 
-      const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
+      const claudeRes = await fetch("/.netlify/functions/classify", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-          "anthropic-dangerous-direct-browser-access": "true",
-        },
-        body: JSON.stringify({
-          model: "claude-haiku-4-5-20251001",
-          max_tokens: 1000,
-          system: "Classify podcasts as energy (podcasts about the energy industry: oil, gas, renewables, solar, wind, nuclear, power sector, electricity, climate, energy policy, energy transition) or other. Reply ONLY with JSON: {\"energy\": [], \"other\": []}",
-          messages: [{ role: "user", content: podcasts.join("\n") }],
-        }),
+        body: JSON.stringify({ podcasts: podcasts.join("\n") }),
       });
       const claudeData = await claudeRes.json();
       const text = claudeData.content[0].text.replace(/```json|```/g, "").trim();
@@ -138,7 +125,7 @@ export default function App() {
   return (
     <div style={{ maxWidth: "680px", margin: "40px auto", fontFamily: "monospace", padding: "0 20px" }}>
       <h1>PodSort</h1>
-      <p style={{ color: "#666" }}>AI-powered podcast sorter - Energy vs Everything Else.</p>
+      <p style={{ color: "#666" }}>AI-powered podcast sorter - Energy Industry vs Everything Else.</p>
 
       {!token ? (
         <a href={getSpotifyAuthURL()}>
@@ -149,18 +136,6 @@ export default function App() {
       ) : (
         <p style={{ color: "#1DB954" }}>Spotify connected!</p>
       )}
-
-      <div style={{ marginTop: "20px" }}>
-        <label>Your Claude API Key</label>
-        <br />
-        <input
-          type="password"
-          value={apiKey}
-          onChange={e => setApiKey(e.target.value)}
-          placeholder="sk-ant-..."
-          style={{ width: "100%", padding: "8px", marginTop: "6px" }}
-        />
-      </div>
 
       <div style={{ marginTop: "20px" }}>
         <label>Show episodes from the last:</label>
