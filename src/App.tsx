@@ -21,6 +21,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
+  const [playlistUrl, setPlaylistUrl] = useState("");
 
   useEffect(() => {
     const code = new URLSearchParams(window.location.search).get("code");
@@ -59,6 +60,7 @@ export default function App() {
     setLoading(true);
     setError("");
     setDone(false);
+    setPlaylistUrl("");
 
     try {
       // Step 1: Fetch followed podcasts
@@ -116,21 +118,21 @@ export default function App() {
         );
         const epData = await epRes.json();
         for (const ep of epData.items || []) {
-  if (!ep || !ep.release_date) continue;
-  const releaseDate = new Date(ep.release_date).getTime();
-  if (releaseDate >= sevenDaysAgo) {
-    newEpisodeUris.push(ep.uri);
-  }
-}
+          if (!ep || !ep.release_date) continue;
+          const releaseDate = new Date(ep.release_date).getTime();
+          if (releaseDate >= sevenDaysAgo) {
+            newEpisodeUris.push(ep.uri);
+          }
+        }
       }
-
-      setStatus(`Found ${newEpisodeUris.length} new episodes. Creating playlist...`);
 
       if (newEpisodeUris.length === 0) {
         setStatus("No new episodes in the last 7 days from your energy podcasts.");
         setLoading(false);
         return;
       }
+
+      setStatus(`Found ${newEpisodeUris.length} new episodes. Creating playlist...`);
 
       // Step 5: Get Spotify user ID
       const userRes = await fetch("https://api.spotify.com/v1/me", {
@@ -171,6 +173,7 @@ export default function App() {
         body: JSON.stringify({ uris: newEpisodeUris }),
       });
 
+      setPlaylistUrl(`https://open.spotify.com/playlist/${playlist.id}`);
       setStatus(`✅ Done! Added ${newEpisodeUris.length} episodes to ⚡ Energy Pods`);
       setDone(true);
     } catch (err: any) {
@@ -216,9 +219,13 @@ export default function App() {
 
       {status && <p style={{ color: "#aaa", marginTop: "10px" }}>{status}</p>}
       {error && <p style={{ color: "red", marginTop: "10px" }}>{error}</p>}
+
       {done && (
         <div style={{ marginTop: "20px", padding: "16px", background: "#1a1a1a", borderRadius: "8px" }}>
-          <p style={{ color: "#1DB954" }}>⚡ Energy Pods playlist updated! Open Spotify to listen.</p>
+          <p style={{ color: "#1DB954" }}>⚡ Energy Pods playlist updated!</p>
+          <a href={playlistUrl} target="_blank" rel="noreferrer" style={{ color: "#1DB954", fontWeight: "bold", fontSize: "1.1rem" }}>
+            → Open ⚡ Energy Pods in Spotify
+          </a>
         </div>
       )}
     </div>
