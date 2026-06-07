@@ -29,8 +29,8 @@ export default function App() {
       window.history.replaceState({}, document.title, "/");
       exchangeCode(code);
     } else {
-      const saved = localStorage.getItem("spotify_token");
-      if (saved) setToken(saved);
+      // Don't reuse saved token - always require fresh login
+localStorage.removeItem("spotify_token");
     }
   }, []);
 
