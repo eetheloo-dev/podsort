@@ -148,20 +148,23 @@ export default function App() {
       let playlist = playlistsData.items?.find((p: any) => p.name === "⚡ Energy Pods");
 
       if (!playlist) {
-        const createRes = await fetch(`https://api.spotify.com/v1/users/${userData.id}/playlists`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            name: "⚡ Energy Pods",
-            description: "Auto-updated energy podcast episodes by PodSort",
-            public: false,
-          }),
-        });
-        playlist = await createRes.json();
-      }
+  const createRes = await fetch(`https://api.spotify.com/v1/users/${userData.id}/playlists`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      name: "⚡ Energy Pods",
+      description: "Auto-updated energy podcast episodes by PodSort",
+      public: false,
+    }),
+  });
+  const createData = await createRes.json();
+  playlist = createData;
+  setStatus(`Playlist created: ${JSON.stringify(createData).substring(0, 100)}`);
+  await new Promise(r => setTimeout(r, 3000));
+}
 
       // Step 7: Add episodes to playlist
       await fetch(`https://api.spotify.com/v1/playlists/${playlist.id}/tracks`, {
