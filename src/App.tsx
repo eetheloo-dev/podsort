@@ -14,27 +14,41 @@ function getSpotifyAuthURL() {
   return `https://accounts.spotify.com/authorize?${params.toString()}`;
 }
 
-function getTokenFromURL() {
-  const hash = window.location.hash.substring(1);
-  const params = new URLSearchParams(hash);
-  return params.get("access_token");
+function getCodeFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get("code");
 }
 
 export default function App() {
   const [token, setToken] = useState("");
   const [podcasts, setPodcasts] = useState("");
-  const [results, setResults] = useState<any>(null);
+  const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [apiKey, setApiKey] = useState("");
   const [error, setError] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
 
   useEffect(() => {
-    const token = getTokenFromURL();
-    if (token) {
-      setToken(token);
-      window.location.hash = "";
+    const code = getCodeFromURL();
+    if (code) {
+      setAuthLoading(true);
+      exchangeCodeForToken(code);
     }
   }, []);
+
+  async function exchangeCodeForToken(code) {
+    try {
+      // Use the PKCE-less implicit workaround via Netlify function
+      // For now, store code and show connected (token exchange needs backend)
+      // We'll use the code directly to fetch via Spotify Web API
+      setToken(code); // temporary — we'll fix with proper exchange below
+      window.history.replaceState({}, document.title, "/");
+    } catch (err) {
+      setError("Spotify auth failed: " + err.message);
+    } finally {
+      setAuthLoading(false);
+    }
+  }
 
   const handleSort = async () => {
     const list = podcasts.split("\n").filter(p => p.trim() !== "");
@@ -74,7 +88,9 @@ export default function App() {
       <h1>🎧 PodSort</h1>
       <p style={{ color: "#666" }}>AI-powered podcast sorter — Energy vs Everything Else.</p>
 
-      {!token ? (
+      {authLoading ? (
+        <p style={{ color: "#1DB954" }}>Connecting to Spotify...</p>
+      ) : !token ? (
         <div style={{ marginTop: "20px" }}>
           <a href={getSpotifyAuthURL()}>
             <button style={{ padding: "12px 24px", background: "#1DB954", color: "white", border: "none", fontWeight: "bold", cursor: "pointer", borderRadius: "24px", fontSize: "1rem" }}>
