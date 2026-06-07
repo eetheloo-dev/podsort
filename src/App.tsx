@@ -144,14 +144,17 @@ localStorage.removeItem("spotify_token");
 const playlist = { id: "4v3Ar7iaiEZRO1d2uNCwWq" };
 
       // Step 7: Add episodes to playlist
-      await fetch(`https://api.spotify.com/v1/playlists/${playlist.id}/tracks`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ uris: newEpisodeUris }),
-      });
+const addRes = await fetch(`https://api.spotify.com/v1/playlists/${playlist.id}/tracks`, {
+  method: "POST",
+  headers: {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({ uris: newEpisodeUris.slice(0, 5) }),
+});
+const addData = await addRes.json();
+setStatus(`Add result: ${JSON.stringify(addData).substring(0, 200)}`);
+await new Promise(r => setTimeout(r, 5000));
 
       setPlaylistUrl(`https://open.spotify.com/playlist/${playlist.id}`);
       setStatus(`✅ Done! Added ${newEpisodeUris.length} episodes to ⚡ Energy Pods`);
