@@ -84,7 +84,7 @@ export default function App() {
         body: JSON.stringify({
           model: "claude-haiku-4-5-20251001",
           max_tokens: 1000,
-          system: "Classify podcasts as energy (motivating, high-energy, business, fitness, entrepreneurship, tech, news) or other. Reply ONLY with JSON: {\"energy\": [], \"other\": []}",
+          system: "Classify podcasts as energy (podcasts about the energy industry: oil, gas, renewables, solar, wind, nuclear, power sector, electricity, climate, energy policy, energy transition) or other. Reply ONLY with JSON: {\"energy\": [], \"other\": []}",
           messages: [{ role: "user", content: podcasts.join("\n") }],
         }),
       });
