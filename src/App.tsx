@@ -116,11 +116,12 @@ export default function App() {
         );
         const epData = await epRes.json();
         for (const ep of epData.items || []) {
-          const releaseDate = new Date(ep.release_date).getTime();
-          if (releaseDate >= sevenDaysAgo) {
-            newEpisodeUris.push(ep.uri);
-          }
-        }
+  if (!ep || !ep.release_date) continue;
+  const releaseDate = new Date(ep.release_date).getTime();
+  if (releaseDate >= sevenDaysAgo) {
+    newEpisodeUris.push(ep.uri);
+  }
+}
       }
 
       setStatus(`Found ${newEpisodeUris.length} new episodes. Creating playlist...`);
